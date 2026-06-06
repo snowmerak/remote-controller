@@ -1,0 +1,6 @@
+{
+  "username": "admin",
+  "password": "password123",
+  "port": ":8080",
+  "db_path": "history.db"
+}
