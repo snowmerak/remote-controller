@@ -337,7 +337,12 @@
         </div>
         <div class="form-control">
           <label class="label"><span class="label-text font-medium text-slate-300">Absolute Directory Path</span></label>
-          <input type="text" id="sessDirectory" placeholder="C:/Users/..." class="input input-bordered focus:input-primary w-full" required />
+          <div class="flex gap-2">
+            <input type="text" id="sessDirectory" placeholder="C:/Users/..." class="input input-bordered focus:input-primary grow" required />
+            <button type="button" onclick="openExplorerFromRegister()" class="btn btn-neutral btn-square" title="Browse directories">
+              <i data-lucide="folder-search" class="w-4 h-4 text-warning"></i>
+            </button>
+          </div>
         </div>
         <div class="form-control">
           <label class="label"><span class="label-text font-medium text-slate-300">CLI Service</span></label>
@@ -1011,8 +1016,16 @@
       document.getElementById("explorerModal").close();
       document.getElementById("registerModal").showModal();
       document.getElementById("sessDirectory").value = path;
-      const name = path.substring(path.lastIndexOf('/') + 1);
-      document.getElementById("sessAlias").value = name.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const aliasInput = document.getElementById("sessAlias");
+      if (!aliasInput.value.trim()) {
+        const name = path.substring(path.lastIndexOf('/') + 1);
+        aliasInput.value = name.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      }
+    }
+
+    function openExplorerFromRegister() {
+      document.getElementById("registerModal").close();
+      openExplorerModal();
     }
 
     // ==================== MODAL 2: REGISTER CUSTOM SESSION LOGIC ====================
