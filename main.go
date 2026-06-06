@@ -38,6 +38,9 @@ func main() {
 	app := fiber.New()
 
 	// Public routes
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.SendFile("./static/index.html")
+	})
 	app.Post("/api/login", HandleLogin)
 
 	// Authenticated routes group

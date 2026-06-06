@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="night">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Controller Console</title>
+  <!-- Google Fonts (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS & DaisyUI CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body class="bg-base-300 min-h-screen text-base-content antialiased">
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-base-300/80 backdrop-blur-md hidden">
+    <div class="card w-96 glass-panel shadow-2xl border border-primary/20">
+      <div class="card-body">
+        <div class="flex flex-col items-center gap-2 mb-4">
+          <div class="avatar placeholder">
+            <div class="bg-primary text-primary-content rounded-full w-12">
+              <i data-lucide="terminal" class="w-6 h-6"></i>
+            </div>
+          </div>
+          <h2 class="card-title text-2xl font-bold tracking-tight">Remote Controller</h2>
+          <p class="text-sm opacity-60">Log in to manage workspaces</p>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Username</span></label>
+            <input type="text" id="loginUsername" placeholder="Username" class="input input-bordered focus:input-primary w-full" required />
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Password</span></label>
+            <input type="password" id="loginPassword" placeholder="••••••••" class="input input-bordered focus:input-primary w-full" required />
+          </div>
+          <div id="loginError" class="alert alert-error py-2 text-xs font-semibold text-white hidden">
+            <span id="loginErrorMessage">Invalid credentials</span>
+          </div>
+          <div class="card-actions justify-end mt-4">
+            <button type="submit" class="btn btn-primary w-full gap-2">
+              <span>Login</span>
+              <i data-lucide="log-in" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN DASHBOARD LAYOUT ==================== -->
+  <div id="dashboardLayout" class="flex flex-col lg:flex-row min-h-screen hidden">
+    
+    <!-- Left Sidebar -->
+    <aside class="w-full lg:w-72 bg-base-200 border-r border-base-100 flex flex-col shrink-0">
+      <div class="p-6 border-b border-base-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-content font-bold">
+            <i data-lucide="terminal" class="w-5 h-5"></i>
+          </div>
+          <span class="font-bold tracking-wide text-lg text-white">Remote API</span>
+        </div>
+        <div class="badge badge-accent badge-sm font-semibold">Fiber v3</div>
+      </div>
+      
+      <!-- Navigation Links -->
+      <nav class="p-4 space-y-1 grow">
+        <button onclick="switchTab('sessions')" id="tabBtn-sessions" class="tab-btn btn btn-ghost justify-start w-full gap-3 text-left">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+          <span>Workspace Sessions</span>
+        </button>
+        <button onclick="switchTab('explore')" id="tabBtn-explore" class="tab-btn btn btn-ghost justify-start w-full gap-3 text-left">
+          <i data-lucide="folder-open" class="w-5 h-5"></i>
+          <span>Directory Explorer</span>
+        </button>
+        <button onclick="switchTab('console')" id="tabBtn-console" class="tab-btn btn btn-ghost justify-start w-full gap-3 text-left">
+          <i data-lucide="play" class="w-5 h-5"></i>
+          <span>Command Console</span>
+        </button>
+        <button onclick="switchTab('history')" id="tabBtn-history" class="tab-btn btn btn-ghost justify-start w-full gap-3 text-left">
+          <i data-lucide="history" class="w-5 h-5"></i>
+          <span>Execution History</span>
+        </button>
+      </nav>
+
+      <!-- User Info & Logout -->
+      <div class="p-4 border-t border-base-100 bg-base-300/40 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="avatar placeholder">
+            <div class="bg-neutral text-neutral-content rounded-full w-8">
+              <span id="userAvatarInitials">AD</span>
+            </div>
+          </div>
+          <div>
+            <div class="font-bold text-xs text-white" id="userDisplayName">admin</div>
+            <div class="text-[10px] opacity-50">API Operator</div>
+          </div>
+        </div>
+        <button onclick="handleLogout()" class="btn btn-sm btn-circle btn-ghost text-error" title="Logout">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Container -->
+    <main class="grow flex flex-col min-h-screen">
+      
+      <!-- Top header -->
+      <header class="p-6 bg-base-200/50 border-b border-base-100 flex items-center justify-between">
+        <div>
+          <h1 id="pageTitle" class="text-2xl font-bold tracking-tight text-white">Workspace Sessions</h1>
+          <p id="pageDescription" class="text-xs opacity-60">Manage your active working directory mapping pairs</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="headerActionButton" class="btn btn-primary btn-sm gap-2 hidden" onclick="openNewSessionModal()">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Register Session</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Panel Body -->
+      <div class="p-6 grow overflow-y-auto">
+        
+        <!-- ==================== TAB 1: SESSIONS ==================== -->
+        <div id="tabPanel-sessions" class="tab-panel space-y-6 hidden">
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <!-- Left panel: Sessions table -->
+            <div class="xl:col-span-2 card bg-base-200 shadow-lg border border-base-100">
+              <div class="card-body p-0">
+                <div class="p-6 flex items-center justify-between border-b border-base-100">
+                  <h3 class="font-bold text-lg text-white">Registered Sessions</h3>
+                  <div class="text-xs opacity-60" id="sessionsSummary">0 sessions total</div>
+                </div>
+                <div class="overflow-x-auto w-full">
+                  <table class="table w-full">
+                    <thead>
+                      <tr>
+                        <th>Alias</th>
+                        <th>Directory Path</th>
+                        <th>CLI Service</th>
+                        <th>Registered At</th>
+                        <th class="w-20">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sessionsTableBody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Pagination -->
+                <div class="p-4 border-t border-base-100 flex items-center justify-between">
+                  <div class="text-xs opacity-50" id="sessionsPageIndicator">Page 1 of 1</div>
+                  <div class="join">
+                    <button class="join-item btn btn-xs" onclick="changeSessionsPage(-1)">Previous</button>
+                    <button class="join-item btn btn-xs" onclick="changeSessionsPage(1)">Next</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right panel: Register form -->
+            <div class="card bg-base-200 shadow-lg border border-base-100 h-fit">
+              <div class="card-body">
+                <h3 class="font-bold text-lg text-white mb-4">Register New Session</h3>
+                <form id="createSessionForm" onsubmit="handleCreateSessionSubmit(event)" class="space-y-4">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Session Alias</span></label>
+                    <input type="text" id="sessAlias" placeholder="e.g. backend-proj" class="input input-bordered focus:input-primary w-full" required />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text font-medium">Directory Path</span>
+                      <span class="label-text-alt opacity-50">Must match regex</span>
+                    </label>
+                    <input type="text" id="sessDirectory" placeholder="e.g. C:/Users/snowm/Projects/proj" class="input input-bordered focus:input-primary w-full" required />
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">CLI Service</span></label>
+                    <select id="sessService" class="select select-bordered focus:select-primary w-full">
+                      <option value="grok" selected>Grok (grok -c -p)</option>
+                      <option value="agx">Agx (agx wrapper)</option>
+                    </select>
+                  </div>
+                  <div id="createSessionError" class="alert alert-error py-2 text-xs font-semibold text-white hidden">
+                    <span id="createSessionErrorMessage">Validation failed</span>
+                  </div>
+                  <div id="createSessionSuccess" class="alert alert-success py-2 text-xs font-semibold text-white hidden">
+                    <span>Session registered successfully!</span>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-full gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Save Session</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 2: EXPLORER ==================== -->
+        <div id="tabPanel-explore" class="tab-panel space-y-6 hidden">
+          <div class="card bg-base-200 shadow-lg border border-base-100">
+            <div class="card-body">
+              <!-- Path navigation input -->
+              <div class="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
+                <button onclick="exploreParentDir()" class="btn btn-square btn-outline btn-neutral" title="Go to Parent">
+                  <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div class="input-group grow flex">
+                  <span class="bg-base-300 px-4 flex items-center border border-r-0 border-base-100 rounded-l-lg text-xs opacity-60">Path</span>
+                  <input type="text" id="explorePathInput" placeholder="C:/Users/snowm/Projects" class="input input-bordered focus:input-primary grow rounded-l-none" />
+                </div>
+                <button onclick="loadExploreFromInput()" class="btn btn-primary gap-2">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                  <span>Explore</span>
+                </button>
+              </div>
+
+              <!-- Error Alert -->
+              <div id="exploreError" class="alert alert-error text-white font-medium py-3 mt-4 hidden">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                <span id="exploreErrorMessage">Access to directory is denied.</span>
+              </div>
+
+              <!-- Explorer Items Table -->
+              <div class="overflow-x-auto w-full mt-6 border border-base-100 rounded-lg">
+                <table class="table table-zebra w-full">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Full Path</th>
+                      <th class="w-48 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exploreTableBody">
+                    <!-- Rendered by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 3: CONSOLE ==================== -->
+        <div id="tabPanel-console" class="tab-panel space-y-6 hidden">
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <!-- Left panel: Form input -->
+            <div class="card bg-base-200 shadow-lg border border-base-100 h-fit">
+              <div class="card-body">
+                <h3 class="font-bold text-lg text-white mb-4">Execute Prompt</h3>
+                <form id="runQueryForm" onsubmit="handleRunQuerySubmit(event)" class="space-y-4">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Select Session</span></label>
+                    <select id="querySessionAlias" class="select select-bordered focus:select-primary w-full" required>
+                      <!-- Populated by JS -->
+                    </select>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Prompt Query</span></label>
+                    <textarea id="queryPrompt" rows="6" placeholder="Ask agx or grok anything inside the session's workspace..." class="textarea textarea-bordered focus:textarea-primary w-full font-mono text-sm leading-relaxed" required></textarea>
+                  </div>
+                  <button type="submit" id="runQueryBtn" class="btn btn-primary w-full gap-2">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    <span>Execute Prompt</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Right panel: Terminal Output -->
+            <div class="xl:col-span-2 card bg-base-200 shadow-lg border border-base-100 flex flex-col min-h-[500px]">
+              <div class="p-6 border-b border-base-100 flex items-center justify-between bg-base-200/50">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                  <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                  <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                  <span class="font-semibold text-xs ml-2 text-white">terminal - output</span>
+                </div>
+                <button onclick="clearTerminal()" class="btn btn-xs btn-outline btn-neutral gap-1">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  <span>Clear</span>
+                </button>
+              </div>
+              <div class="grow p-6 bg-black font-mono text-sm overflow-auto text-green-400 select-text whitespace-pre-wrap leading-relaxed min-h-[400px]" id="terminalOutput">
+                <span class="text-neutral-500">// Ready to execute prompt query. Select a session and prompt above.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 4: HISTORY ==================== -->
+        <div id="tabPanel-history" class="tab-panel space-y-6 hidden">
+          <div class="card bg-base-200 shadow-lg border border-base-100">
+            <div class="card-body p-0">
+              <div class="p-6 border-b border-base-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h3 class="font-bold text-lg text-white">Execution Logs</h3>
+                <div class="flex items-center gap-2">
+                  <select id="historyFilterAlias" onchange="loadHistory()" class="select select-sm select-bordered focus:select-primary w-48">
+                    <option value="">All Sessions</option>
+                    <!-- Populated by JS -->
+                  </select>
+                  <button onclick="loadHistory()" class="btn btn-sm btn-square btn-outline btn-neutral" title="Refresh">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="overflow-x-auto w-full">
+                <table class="table w-full">
+                  <thead>
+                    <tr>
+                      <th class="w-16">ID</th>
+                      <th class="w-40">Session Alias</th>
+                      <th>Prompt</th>
+                      <th>Response / Error</th>
+                      <th class="w-20">Status</th>
+                      <th class="w-44">Executed At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTableBody">
+                    <!-- Rendered by JS -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="p-6 border-t border-base-100 flex items-center justify-between">
+                <div class="text-xs opacity-50" id="historyPageIndicator">Page 1 of 1</div>
+                <div class="join">
+                  <button class="join-item btn btn-sm" onclick="changeHistoryPage(-1)">Previous</button>
+                  <button class="join-item btn btn-sm" onclick="changeHistoryPage(1)">Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Modal for History -->
+  <dialog id="historyDetailModal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl bg-base-200 border border-base-100">
+      <h3 class="font-bold text-lg text-white mb-4">History Log Details</h3>
+      <div class="space-y-4">
+        <div>
+          <span class="text-xs uppercase opacity-40 font-bold tracking-wider">Session Alias</span>
+          <p id="modalSessionAlias" class="font-semibold text-white mt-0.5"></p>
+        </div>
+        <div>
+          <span class="text-xs uppercase opacity-40 font-bold tracking-wider">Prompt Query</span>
+          <pre id="modalPrompt" class="bg-black/50 p-3 rounded font-mono text-sm border border-base-100 whitespace-pre-wrap mt-1 text-slate-300"></pre>
+        </div>
+        <div>
+          <span class="text-xs uppercase opacity-40 font-bold tracking-wider">Error (If any)</span>
+          <pre id="modalError" class="bg-red-950/20 text-red-400 p-3 rounded font-mono text-xs border border-red-900/30 whitespace-pre-wrap mt-1 hidden"></pre>
+        </div>
+        <div>
+          <span class="text-xs uppercase opacity-40 font-bold tracking-wider">Console Output</span>
+          <pre id="modalResponse" class="bg-black p-4 rounded font-mono text-sm border border-base-100 whitespace-pre-wrap mt-1 text-green-400 max-h-96 overflow-y-auto"></pre>
+        </div>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral">Close</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== FRONTEND CONTROLLER JAVASCRIPT ==================== -->
+  <script>
+    // State Store
+    const state = {
+      token: localStorage.getItem("jwt_token") || "",
+      username: localStorage.getItem("username") || "admin",
+      activeTab: "sessions",
+      sessions: [],
+      sessionsPage: 1,
+      sessionsTotal: 0,
+      sessionsLimit: 10,
+      historyPage: 1,
+      historyTotal: 0,
+      historyLimit: 10,
+      currentExplorePath: "C:/Users/snowm/Projects"
+    };
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      checkAuth();
+    });
+
+    // Check Authentication state
+    function checkAuth() {
+      const loginScreen = document.getElementById("loginScreen");
+      const dashboardLayout = document.getElementById("dashboardLayout");
+      
+      if (!state.token) {
+        loginScreen.classList.remove("hidden");
+        dashboardLayout.classList.add("hidden");
+      } else {
+        loginScreen.classList.add("hidden");
+        dashboardLayout.classList.remove("hidden");
+        document.getElementById("userDisplayName").innerText = state.username;
+        document.getElementById("userAvatarInitials").innerText = state.username.slice(0,2).toUpperCase();
+        
+        // Load default tab
+        switchTab(state.activeTab);
+      }
+    }
+
+    // API Wrapper
+    async function apiFetch(url, options = {}) {
+      if (!options.headers) {
+        options.headers = {};
+      }
+      if (state.token) {
+        options.headers["Authorization"] = `Bearer ${state.token}`;
+      }
+      
+      try {
+        const resp = await fetch(url, options);
+        if (resp.status === 401) {
+          handleLogout();
+          throw new Error("Unauthorized access. Logged out.");
+        }
+        return resp;
+      } catch (err) {
+        console.error("API Fetch Error:", err);
+        throw err;
+      }
+    }
+
+    // Handles Login Submit
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      const user = document.getElementById("loginUsername").value;
+      const pass = document.getElementById("loginPassword").value;
+      const errorDiv = document.getElementById("loginError");
+      errorDiv.classList.add("hidden");
+
+      try {
+        const resp = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || "Login failed");
+        }
+
+        state.token = data.token;
+        state.username = user;
+        localStorage.setItem("jwt_token", data.token);
+        localStorage.setItem("username", user);
+        
+        checkAuth();
+      } catch (err) {
+        errorDiv.classList.remove("hidden");
+        document.getElementById("loginErrorMessage").innerText = err.message;
+      }
+    }
+
+    // Handles Logout
+    function handleLogout() {
+      state.token = "";
+      state.username = "";
+      localStorage.removeItem("jwt_token");
+      localStorage.removeItem("username");
+      checkAuth();
+    }
+
+    // Switch active Tab panel
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+
+      // Hide all panels
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+      // Remove primary/neutral highlights from tab buttons
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.remove("btn-primary", "bg-primary/10", "text-primary");
+        btn.classList.add("btn-ghost");
+      });
+
+      // Show selected panel
+      document.getElementById(`tabPanel-${tabName}`).classList.remove("hidden");
+      // Highlight active button
+      const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.remove("btn-ghost");
+        activeBtn.classList.add("btn-primary", "bg-primary/10", "text-primary");
+      }
+
+      // Update Page Headers
+      const pageTitle = document.getElementById("pageTitle");
+      const pageDescription = document.getElementById("pageDescription");
+      
+      switch (tabName) {
+        case "sessions":
+          pageTitle.innerText = "Workspace Sessions";
+          pageDescription.innerText = "Manage your active working directory mapping pairs";
+          loadSessions();
+          break;
+        case "explore":
+          pageTitle.innerText = "Directory Explorer";
+          pageDescription.innerText = "Traverse local files and folders inside approved directories";
+          loadExplore(state.currentExplorePath);
+          break;
+        case "console":
+          pageTitle.innerText = "Command Console";
+          pageDescription.innerText = "Run non-interactive CLI prompts inside registered environments";
+          populateSessionDropdowns();
+          break;
+        case "history":
+          pageTitle.innerText = "Execution History";
+          pageDescription.innerText = "Review and expand execution records from SQLite database logs";
+          populateSessionDropdowns();
+          loadHistory();
+          break;
+      }
+
+      lucide.createIcons();
+    }
+
+    // ==================== TAB 1: SESSIONS LOGIC ====================
+    async function loadSessions() {
+      const tbody = document.getElementById("sessionsTableBody");
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6"><span class="loading loading-spinner loading-md text-primary"></span></td></tr>`;
+
+      try {
+        const resp = await apiFetch(`/api/sessions?page=${state.sessionsPage}&limit=${state.sessionsLimit}`);
+        const data = await resp.json();
+        
+        state.sessions = data.sessions || [];
+        state.sessionsTotal = data.total;
+        
+        document.getElementById("sessionsSummary").innerText = `${state.sessionsTotal} sessions total`;
+        document.getElementById("sessionsPageIndicator").innerText = `Page ${state.sessionsPage} of ${Math.ceil(state.sessionsTotal / state.sessionsLimit) || 1}`;
+        
+        if (state.sessions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 opacity-50">No sessions registered yet. Use the form on the right or explore directories to create one.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = "";
+        state.sessions.forEach(s => {
+          const tr = document.createElement("tr");
+          tr.className = "hover";
+          
+          const formattedDate = new Date(s.created_at).toLocaleString();
+
+          tr.innerHTML = `
+            <td class="font-bold text-white">${escapeHtml(s.alias)}</td>
+            <td><code class="text-xs bg-black/30 px-2 py-1 rounded text-slate-300 font-mono">${escapeHtml(s.directory)}</code></td>
+            <td>
+              <div class="badge ${s.service === 'agx' ? 'badge-primary' : 'badge-secondary'} font-semibold text-xs">${escapeHtml(s.service)}</div>
+            </td>
+            <td class="text-xs opacity-70">${formattedDate}</td>
+            <td>
+              <button onclick="deleteSessionConfirm('${escapeHtml(s.alias)}')" class="btn btn-xs btn-ghost btn-circle text-error" title="Delete">
+                <i data-lucide="trash" class="w-4 h-4"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-error font-medium">Failed to load sessions: ${err.message}</td></tr>`;
+      }
+    }
+
+    function changeSessionsPage(direction) {
+      const maxPage = Math.ceil(state.sessionsTotal / state.sessionsLimit) || 1;
+      const targetPage = state.sessionsPage + direction;
+      if (targetPage >= 1 && targetPage <= maxPage) {
+        state.sessionsPage = targetPage;
+        loadSessions();
+      }
+    }
+
+    async function handleCreateSessionSubmit(event) {
+      event.preventDefault();
+      const alias = document.getElementById("sessAlias").value;
+      const directory = document.getElementById("sessDirectory").value;
+      const service = document.getElementById("sessService").value;
+      
+      const errDiv = document.getElementById("createSessionError");
+      const successDiv = document.getElementById("createSessionSuccess");
+      
+      errDiv.classList.add("hidden");
+      successDiv.classList.add("hidden");
+
+      try {
+        const resp = await apiFetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alias, directory, service })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || "Failed to create session");
+        }
+
+        successDiv.classList.remove("hidden");
+        document.getElementById("createSessionForm").reset();
+        
+        setTimeout(() => {
+          successDiv.classList.add("hidden");
+          loadSessions();
+        }, 1500);
+      } catch (err) {
+        errDiv.classList.remove("hidden");
+        document.getElementById("createSessionErrorMessage").innerText = err.message;
+      }
+    }
+
+    async function deleteSessionConfirm(alias) {
+      if (confirm(`Are you sure you want to delete session "${alias}"? This will also delete all its prompt history logs.`)) {
+        try {
+          const resp = await apiFetch(`/api/sessions/${alias}`, { method: "DELETE" });
+          if (!resp.ok) {
+            const data = await resp.json();
+            throw new Error(data.error || "Failed to delete session");
+          }
+          loadSessions();
+        } catch (err) {
+          alert(`Error deleting session: ${err.message}`);
+        }
+      }
+    }
+
+    // ==================== TAB 2: EXPLORER LOGIC ====================
+    async function loadExplore(path) {
+      const tbody = document.getElementById("exploreTableBody");
+      const errDiv = document.getElementById("exploreError");
+      
+      errDiv.classList.add("hidden");
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></td></tr>`;
+      
+      document.getElementById("explorePathInput").value = path;
+      state.currentExplorePath = path;
+
+      try {
+        const resp = await apiFetch(`/api/explore?path=${encodeURIComponent(path)}`);
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          throw new Error(data.error || "Failed to load directory items");
+        }
+
+        tbody.innerHTML = "";
+        const items = data.items || [];
+        
+        if (items.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 opacity-50">Empty directory</td></tr>`;
+          return;
+        }
+
+        items.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.className = "hover";
+          
+          const nameSpan = item.is_dir 
+            ? `<button onclick="loadExplore('${escapeHtml(item.path)}')" class="link link-primary font-semibold flex items-center gap-2 text-left">
+                 <i data-lucide="folder" class="w-4 h-4 text-warning"></i>
+                 <span>${escapeHtml(item.name)}</span>
+               </button>`
+            : `<span class="flex items-center gap-2 opacity-70">
+                 <i data-lucide="file" class="w-4 h-4 opacity-50"></i>
+                 <span>${escapeHtml(item.name)}</span>
+               </span>`;
+
+          const typeBadge = item.is_dir 
+            ? `<div class="badge badge-neutral text-xs">Directory</div>` 
+            : `<div class="badge badge-outline text-xs opacity-50">File</div>`;
+
+          const actionBtn = item.is_dir 
+            ? `<button onclick="fillRegisterSessionForm('${escapeHtml(item.path)}')" class="btn btn-xs btn-outline btn-primary gap-1">
+                 <i data-lucide="plus" class="w-3 h-3"></i>
+                 <span>Register</span>
+               </button>`
+            : "";
+
+          tr.innerHTML = `
+            <td>${nameSpan}</td>
+            <td>${typeBadge}</td>
+            <td><code class="text-xs font-mono opacity-60">${escapeHtml(item.path)}</code></td>
+            <td class="text-right">${actionBtn}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 opacity-30">No items loaded.</td></tr>`;
+        errDiv.classList.remove("hidden");
+        document.getElementById("exploreErrorMessage").innerText = err.message;
+      }
+    }
+
+    function loadExploreFromInput() {
+      const path = document.getElementById("explorePathInput").value;
+      if (path) {
+        loadExplore(path);
+      }
+    }
+
+    function exploreParentDir() {
+      let path = state.currentExplorePath;
+      // standardise path separators
+      path = path.replace(/\\/g, '/');
+      const idx = path.lastIndexOf('/');
+      if (idx > 0) {
+        const parentPath = path.substring(0, idx);
+        loadExplore(parentPath);
+      }
+    }
+
+    function fillRegisterSessionForm(path) {
+      // Switch to sessions tab and prefill directory input
+      switchTab("sessions");
+      document.getElementById("sessDirectory").value = path;
+      // Auto fill alias as directory name
+      const name = path.substring(path.lastIndexOf('/') + 1);
+      document.getElementById("sessAlias").value = name.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+    }
+
+    // ==================== TAB 3: CONSOLE (RUN QUERY) LOGIC ====================
+    async function populateSessionDropdowns() {
+      const selectConsole = document.getElementById("querySessionAlias");
+      const selectHistory = document.getElementById("historyFilterAlias");
+      
+      const currentSelectedConsole = selectConsole.value;
+      const currentSelectedHistory = selectHistory.value;
+
+      try {
+        const resp = await apiFetch(`/api/sessions?page=1&limit=100`);
+        const data = await resp.json();
+        const list = data.sessions || [];
+
+        // Console Dropdown
+        selectConsole.innerHTML = list.length === 0 
+          ? `<option value="" disabled selected>No active sessions</option>`
+          : "";
+        
+        list.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.alias;
+          opt.innerText = `${s.alias} (${s.service} - ${s.directory})`;
+          if (s.alias === currentSelectedConsole) {
+            opt.selected = true;
+          }
+          selectConsole.appendChild(opt);
+        });
+
+        // History Dropdown
+        selectHistory.innerHTML = `<option value="">All Sessions</option>`;
+        list.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.alias;
+          opt.innerText = s.alias;
+          if (s.alias === currentSelectedHistory) {
+            opt.selected = true;
+          }
+          selectHistory.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Failed to populate dropdowns:", err);
+      }
+    }
+
+    async function handleRunQuerySubmit(event) {
+      event.preventDefault();
+      const alias = document.getElementById("querySessionAlias").value;
+      const prompt = document.getElementById("queryPrompt").value;
+      const runBtn = document.getElementById("runQueryBtn");
+      const outputDiv = document.getElementById("terminalOutput");
+
+      if (!alias) {
+        alert("Please register and select a workspace session first.");
+        return;
+      }
+
+      runBtn.disabled = true;
+      runBtn.innerHTML = `<span class="loading loading-spinner loading-xs"></span> Running...`;
+      outputDiv.innerHTML = `<span class="text-neutral-500">// Executing command subprocess... Please wait (timeout up to 3 mins).</span>`;
+
+      try {
+        const resp = await apiFetch("/api/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alias, prompt })
+        });
+        
+        const data = await resp.json();
+        
+        if (resp.ok) {
+          outputDiv.innerHTML = `<span class="text-neutral-400">// Execution succeeded:</span>\n\n${escapeHtml(data.output)}`;
+        } else {
+          outputDiv.innerHTML = `<span class="text-red-500 font-bold">// Execution failed (Exit code / Subprocess Error):</span>\n<span class="text-red-400 font-semibold">${escapeHtml(data.error)}</span>\n\n<span class="text-neutral-400">// Subprocess Terminal Output:</span>\n${escapeHtml(data.output)}`;
+        }
+      } catch (err) {
+        outputDiv.innerHTML = `<span class="text-red-500 font-bold">// Request error:</span>\n<span class="text-red-400">${escapeHtml(err.message)}</span>`;
+      } finally {
+        runBtn.disabled = false;
+        runBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i><span>Execute Prompt</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    function clearTerminal() {
+      document.getElementById("terminalOutput").innerHTML = `<span class="text-neutral-500">// Ready to execute prompt query. Select a session and prompt above.</span>`;
+    }
+
+    // ==================== TAB 4: HISTORY LOGS LOGIC ====================
+    async function loadHistory() {
+      const tbody = document.getElementById("historyTableBody");
+      const filterAlias = document.getElementById("historyFilterAlias").value;
+
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></td></tr>`;
+
+      try {
+        let url = `/api/history?page=${state.historyPage}&limit=${state.historyLimit}`;
+        if (filterAlias) {
+          url += `&alias=${encodeURIComponent(filterAlias)}`;
+        }
+
+        const resp = await apiFetch(url);
+        const data = await resp.json();
+        
+        state.historyTotal = data.total;
+        
+        document.getElementById("historyPageIndicator").innerText = `Page ${state.historyPage} of ${Math.ceil(state.historyTotal / state.historyLimit) || 1}`;
+
+        const list = data.history || [];
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 opacity-50">No execution logs found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = "";
+        list.forEach(h => {
+          const tr = document.createElement("tr");
+          tr.className = "hover cursor-pointer";
+          tr.onclick = () => showHistoryDetail(h);
+          
+          const statusBadge = h.error 
+            ? `<div class="badge badge-error text-xs font-semibold text-white">Error</div>`
+            : `<div class="badge badge-success text-xs font-semibold text-white">Success</div>`;
+
+          const truncatedPrompt = truncateString(h.prompt, 40);
+          const truncatedResponse = h.error ? truncateString(h.error, 40) : truncateString(h.response, 40);
+          const formattedDate = new Date(h.created_at).toLocaleString();
+
+          tr.innerHTML = `
+            <td class="text-xs font-mono opacity-50">${h.id}</td>
+            <td class="font-bold text-white">${escapeHtml(h.session_alias)}</td>
+            <td class="font-mono text-xs max-w-xs truncate">${escapeHtml(truncatedPrompt)}</td>
+            <td class="font-mono text-xs max-w-xs truncate text-slate-400">${escapeHtml(truncatedResponse)}</td>
+            <td>${statusBadge}</td>
+            <td class="text-xs opacity-70">${formattedDate}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-error font-medium">Failed to load history logs: ${err.message}</td></tr>`;
+      }
+    }
+
+    function changeHistoryPage(direction) {
+      const maxPage = Math.ceil(state.historyTotal / state.historyLimit) || 1;
+      const targetPage = state.historyPage + direction;
+      if (targetPage >= 1 && targetPage <= maxPage) {
+        state.historyPage = targetPage;
+        loadHistory();
+      }
+    }
+
+    function showHistoryDetail(h) {
+      document.getElementById("modalSessionAlias").innerText = h.session_alias;
+      document.getElementById("modalPrompt").innerText = h.prompt;
+      
+      const errPre = document.getElementById("modalError");
+      if (h.error) {
+        errPre.innerText = h.error;
+        errPre.classList.remove("hidden");
+      } else {
+        errPre.classList.add("hidden");
+      }
+
+      document.getElementById("modalResponse").innerText = h.response;
+      document.getElementById("historyDetailModal").showModal();
+    }
+
+    // ==================== HELPER UTILITIES ====================
+    function truncateString(str, num) {
+      if (!str) return "";
+      if (str.length <= num) {
+        return str;
+      }
+      return str.slice(0, num) + "...";
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  </script>
+</body>
+</html>
