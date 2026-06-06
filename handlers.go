@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
@@ -56,9 +58,14 @@ func HandleCreateSession(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "service must be either 'agx' or 'grok'"})
 	}
 
+	normalizedDir := NormalizePath(req.Directory)
+	if !IsValidPath(normalizedDir) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Directory path is not allowed by configuration"})
+	}
+
 	s := Session{
 		Alias:     req.Alias,
-		Directory: req.Directory,
+		Directory: normalizedDir,
 		Service:   req.Service,
 	}
 
@@ -189,5 +196,55 @@ func HandleGetHistory(c fiber.Ctx) error {
 		"total":   total,
 		"page":    page,
 		"limit":   limit,
+	})
+}
+
+type ExploreItem struct {
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	IsDir bool   `json:"is_dir"`
+}
+
+// HandleExplore lists contents of a directory if validated against allowed_dirs_regex.
+func HandleExplore(c fiber.Ctx) error {
+	path := c.Query("path", "")
+	if path == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "path parameter is required"})
+	}
+
+	normalizedPath := NormalizePath(path)
+	if !IsValidPath(normalizedPath) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access to path is not allowed by configuration"})
+	}
+
+	info, err := os.Stat(normalizedPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Path does not exist"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to stat path: %v", err)})
+	}
+
+	if !info.IsDir() {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Path is not a directory"})
+	}
+
+	entries, err := os.ReadDir(normalizedPath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to read directory: %v", err)})
+	}
+
+	var items []ExploreItem
+	for _, entry := range entries {
+		items = append(items, ExploreItem{
+			Name:  entry.Name(),
+			Path:  NormalizePath(filepath.Join(normalizedPath, entry.Name())),
+			IsDir: entry.IsDir(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"current_path": normalizedPath,
+		"items":        items,
 	})
 }

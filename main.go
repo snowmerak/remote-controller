@@ -47,6 +47,7 @@ func main() {
 	api.Delete("/sessions/:alias", HandleDeleteSession)
 	api.Post("/query", HandleQuery)
 	api.Get("/history", HandleGetHistory)
+	api.Get("/explore", HandleExplore)
 
 	// Start server on a background goroutine to support deferred cleanups
 	go func() {

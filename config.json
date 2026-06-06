@@ -2,5 +2,6 @@
   "username": "admin",
   "password": "password123",
   "port": ":8080",
-  "db_path": "history.db"
+  "db_path": "history.db",
+  "allowed_dirs_regex": "^C:/Users/snowm/Projects/.*$"
 }

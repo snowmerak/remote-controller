@@ -5,6 +5,8 @@ Remote Controller is a secure, lightweight Go API built with **Fiber v3** that e
 ## Features
 
 - **Directory-Based Sessions**: Map local directory paths to aliases and CLI services (`agx` or `grok`).
+- **Path Validation**: Session directories and traversal paths are verified against a regular expression pattern specified in the configuration file.
+- **Directory Traversal**: Navigate directories matching validation criteria using filesystem exploration endpoints.
 - **Secure Authentication**: JWT token-based API endpoints.
 - **Transient Session Signing Key**: JWT HMAC signing key is randomly generated on startup and kept locked in memory using **memguard**; all tokens invalidate when the server restarts.
 - **Subprocess Command execution**: Run commands contextually inside mapped workspaces:
@@ -21,7 +23,8 @@ Place a `config.json` file in the root directory:
   "username": "admin",
   "password": "password123",
   "port": ":8080",
-  "db_path": "history.db"
+  "db_path": "history.db",
+  "allowed_dirs_regex": "^C:/Users/snowm/Projects/.*$"
 }
 ```
 
@@ -38,7 +41,9 @@ go run .
 ### Authentication
 - `POST /api/login`: Logs in with configuration credentials. Returns a JWT token.
 
-### Sessions (Requires Authentication)
+### Sessions & Traversal (Requires Authentication)
+- `GET /api/explore`: Explore filesystem directories.
+  - Query parameters: `path` (absolute path to list).
 - `POST /api/sessions`: Register or update a session.
   - Body: `{ "alias": "name", "directory": "/path/to/dir", "service": "agx" }`
 - `GET /api/sessions`: List registered sessions with pagination.

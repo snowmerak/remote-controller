@@ -4,17 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 )
 
 // Config holds the application configuration.
 type Config struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Port     string `json:"port"`
-	DBPath   string `json:"db_path"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	Port             string `json:"port"`
+	DBPath           string `json:"db_path"`
+	AllowedDirsRegex string `json:"allowed_dirs_regex"`
 }
 
-var AppConfig Config
+var (
+	AppConfig         Config
+	AllowedDirsRegexp *regexp.Regexp
+)
 
 // LoadConfig reads configuration from the given file path.
 func LoadConfig(path string) error {
@@ -37,6 +42,15 @@ func LoadConfig(path string) error {
 	}
 	if AppConfig.DBPath == "" {
 		AppConfig.DBPath = "history.db"
+	}
+	if AppConfig.AllowedDirsRegex == "" {
+		AppConfig.AllowedDirsRegex = ".*"
+	}
+
+	var errCompile error
+	AllowedDirsRegexp, errCompile = regexp.Compile(AppConfig.AllowedDirsRegex)
+	if errCompile != nil {
+		return fmt.Errorf("failed to compile allowed_dirs_regex: %w", errCompile)
 	}
 
 	return nil
