@@ -248,3 +248,56 @@ func HandleExplore(c fiber.Ctx) error {
 		"items":        items,
 	})
 }
+
+type CreateChatSessionRequest struct {
+	Alias   string `json:"alias"`
+	Service string `json:"service"`
+}
+
+// HandleCreateChatSession creates a unique directory under the home folder, initializes it, and registers it.
+func HandleCreateChatSession(c fiber.Ctx) error {
+	req := new(CreateChatSessionRequest)
+	if err := c.Bind().Body(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	service := req.Service
+	if service == "" {
+		service = "grok"
+	}
+	if service != "agx" && service != "grok" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "service must be either 'agx' or 'grok'"})
+	}
+
+	uuidStr, directory, err := CreateChatSessionDir()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	alias := req.Alias
+	if alias == "" {
+		alias = "chat-" + uuidStr[:8]
+	}
+
+	s := Session{
+		Alias:     alias,
+		Directory: directory,
+		Service:   service,
+	}
+
+	// Initialize the session (runs agx init if needed)
+	if err := InitDirectorySession(s); err != nil {
+		_ = os.RemoveAll(directory)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to initialize session directory: %v", err)})
+	}
+
+	if err := SaveSession(s.Alias, s.Directory, s.Service); err != nil {
+		_ = os.RemoveAll(directory)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session to database"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status":  "success",
+		"session": s,
+	})
+}

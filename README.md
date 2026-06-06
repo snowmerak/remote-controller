@@ -46,6 +46,8 @@ go run .
   - Query parameters: `path` (absolute path to list).
 - `POST /api/sessions`: Register or update a session.
   - Body: `{ "alias": "name", "directory": "/path/to/dir", "service": "agx" }`
+- `POST /api/sessions/chat`: Create a chat-only session under the home directory.
+  - Body: `{ "alias": "optional-name", "service": "grok" }`
 - `GET /api/sessions`: List registered sessions with pagination.
   - Query parameters: `page` (default `1`), `limit` (default `10`).
 - `DELETE /api/sessions/:alias`: Deregister a session.

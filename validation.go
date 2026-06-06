@@ -13,9 +13,15 @@ func NormalizePath(p string) string {
 	return normalized
 }
 
-// IsValidPath checks if the cleaned path matches the configured allowed directories regex.
+// IsValidPath checks if the cleaned path matches the configured allowed directories regex or resides within the chat base directory.
 func IsValidPath(p string) bool {
 	normalized := NormalizePath(p)
+	
+	// Allow paths inside the system-managed chat base directory
+	if strings.HasPrefix(normalized, GetChatSessionsBasePath()) {
+		return true
+	}
+
 	if AllowedDirsRegexp == nil {
 		return true
 	}

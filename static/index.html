@@ -174,40 +174,74 @@
               </div>
             </div>
 
-            <!-- Right panel: Register form -->
-            <div class="card bg-base-200 shadow-lg border border-base-100 h-fit">
-              <div class="card-body">
-                <h3 class="font-bold text-lg text-white mb-4">Register New Session</h3>
-                <form id="createSessionForm" onsubmit="handleCreateSessionSubmit(event)" class="space-y-4">
-                  <div class="form-control">
-                    <label class="label"><span class="label-text font-medium">Session Alias</span></label>
-                    <input type="text" id="sessAlias" placeholder="e.g. backend-proj" class="input input-bordered focus:input-primary w-full" required />
-                  </div>
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text font-medium">Directory Path</span>
-                      <span class="label-text-alt opacity-50">Must match regex</span>
-                    </label>
-                    <input type="text" id="sessDirectory" placeholder="e.g. C:/Users/snowm/Projects/proj" class="input input-bordered focus:input-primary w-full" required />
-                  </div>
-                  <div class="form-control">
-                    <label class="label"><span class="label-text font-medium">CLI Service</span></label>
-                    <select id="sessService" class="select select-bordered focus:select-primary w-full">
-                      <option value="grok" selected>Grok (grok -c -p)</option>
-                      <option value="agx">Agx (agx wrapper)</option>
-                    </select>
-                  </div>
-                  <div id="createSessionError" class="alert alert-error py-2 text-xs font-semibold text-white hidden">
-                    <span id="createSessionErrorMessage">Validation failed</span>
-                  </div>
-                  <div id="createSessionSuccess" class="alert alert-success py-2 text-xs font-semibold text-white hidden">
-                    <span>Session registered successfully!</span>
-                  </div>
-                  <button type="submit" class="btn btn-primary w-full gap-2">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    <span>Save Session</span>
-                  </button>
-                </form>
+            <!-- Right panel: Forms -->
+            <div class="space-y-6">
+              <!-- Register Form Card -->
+              <div class="card bg-base-200 shadow-lg border border-base-100 h-fit">
+                <div class="card-body">
+                  <h3 class="font-bold text-lg text-white mb-4">Register New Session</h3>
+                  <form id="createSessionForm" onsubmit="handleCreateSessionSubmit(event)" class="space-y-4">
+                    <div class="form-control">
+                      <label class="label"><span class="label-text font-medium">Session Alias</span></label>
+                      <input type="text" id="sessAlias" placeholder="e.g. backend-proj" class="input input-bordered focus:input-primary w-full" required />
+                    </div>
+                    <div class="form-control">
+                      <label class="label">
+                        <span class="label-text font-medium">Directory Path</span>
+                        <span class="label-text-alt opacity-50">Must match regex</span>
+                      </label>
+                      <input type="text" id="sessDirectory" placeholder="e.g. C:/Users/snowm/Projects/proj" class="input input-bordered focus:input-primary w-full" required />
+                    </div>
+                    <div class="form-control">
+                      <label class="label"><span class="label-text font-medium">CLI Service</span></label>
+                      <select id="sessService" class="select select-bordered focus:select-primary w-full">
+                        <option value="grok" selected>Grok (grok -c -p)</option>
+                        <option value="agx">Agx (agx wrapper)</option>
+                      </select>
+                    </div>
+                    <div id="createSessionError" class="alert alert-error py-2 text-xs font-semibold text-white hidden">
+                      <span id="createSessionErrorMessage">Validation failed</span>
+                    </div>
+                    <div id="createSessionSuccess" class="alert alert-success py-2 text-xs font-semibold text-white hidden">
+                      <span>Session registered successfully!</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full gap-2">
+                      <i data-lucide="save" class="w-4 h-4"></i>
+                      <span>Save Session</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Quick Chat Form Card -->
+              <div class="card bg-base-200 shadow-lg border border-base-100 h-fit">
+                <div class="card-body">
+                  <h3 class="font-bold text-lg text-white mb-4">Quick Chat Session</h3>
+                  <p class="text-xs opacity-60 mb-2">Creates a unique folder under the user home hidden directory.</p>
+                  <form id="createChatForm" onsubmit="handleCreateChatSubmit(event)" class="space-y-4">
+                    <div class="form-control">
+                      <label class="label"><span class="label-text font-medium">Session Alias (Optional)</span></label>
+                      <input type="text" id="chatAlias" placeholder="e.g. general-chat (auto-generated if empty)" class="input input-bordered focus:input-primary w-full" />
+                    </div>
+                    <div class="form-control">
+                      <label class="label"><span class="label-text font-medium">CLI Service</span></label>
+                      <select id="chatService" class="select select-bordered focus:select-primary w-full">
+                        <option value="grok" selected>Grok (grok -c -p)</option>
+                        <option value="agx">Agx (agx wrapper)</option>
+                      </select>
+                    </div>
+                    <div id="createChatError" class="alert alert-error py-2 text-xs font-semibold text-white hidden">
+                      <span id="createChatErrorMessage">Creation failed</span>
+                    </div>
+                    <div id="createChatSuccess" class="alert alert-success py-2 text-xs font-semibold text-white hidden">
+                      <span>Chat session created successfully!</span>
+                    </div>
+                    <button type="submit" id="createChatBtn" class="btn btn-secondary w-full gap-2">
+                      <i data-lucide="message-square" class="w-4 h-4"></i>
+                      <span>Create Chat Session</span>
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
@@ -649,6 +683,46 @@
         } catch (err) {
           alert(`Error deleting session: ${err.message}`);
         }
+      }
+    }
+
+    async function handleCreateChatSubmit(event) {
+      event.preventDefault();
+      const alias = document.getElementById("chatAlias").value;
+      const service = document.getElementById("chatService").value;
+      const btn = document.getElementById("createChatBtn");
+      
+      const errDiv = document.getElementById("createChatError");
+      const successDiv = document.getElementById("createChatSuccess");
+      
+      errDiv.classList.add("hidden");
+      successDiv.classList.add("hidden");
+      btn.disabled = true;
+
+      try {
+        const resp = await apiFetch("/api/sessions/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alias, service })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || "Failed to create chat session");
+        }
+
+        successDiv.classList.remove("hidden");
+        document.getElementById("createChatForm").reset();
+        
+        setTimeout(() => {
+          successDiv.classList.add("hidden");
+          loadSessions();
+        }, 1500);
+      } catch (err) {
+        errDiv.classList.remove("hidden");
+        document.getElementById("createChatErrorMessage").innerText = err.message;
+      } finally {
+        btn.disabled = false;
       }
     }
 

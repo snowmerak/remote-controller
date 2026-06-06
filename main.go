@@ -46,6 +46,7 @@ func main() {
 	// Authenticated routes group
 	api := app.Group("/api", JWTMiddleware)
 	api.Post("/sessions", HandleCreateSession)
+	api.Post("/sessions/chat", HandleCreateChatSession)
 	api.Get("/sessions", HandleListSessions)
 	api.Delete("/sessions/:alias", HandleDeleteSession)
 	api.Post("/query", HandleQuery)
