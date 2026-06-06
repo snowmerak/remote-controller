@@ -25,6 +25,17 @@ func InitDirectorySession(s Session) error {
 		if err != nil {
 			return fmt.Errorf("failed to run agx init --auto (output: %s): %w", string(output), err)
 		}
+	} else if s.Service == "grok" {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, "grok", "-p", "hello")
+		cmd.Dir = s.Directory
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to initialize grok session (output: %s): %w", string(output), err)
+		}
 	}
 	return nil
 }
