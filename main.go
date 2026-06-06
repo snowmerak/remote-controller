@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 	"os"
 	"os/signal"
@@ -9,6 +10,9 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/gofiber/fiber/v3"
 )
+
+//go:embed static/index.html
+var indexHTML []byte
 
 func main() {
 	// Initialize memguard and ensure memory is purged on exit
@@ -39,7 +43,8 @@ func main() {
 
 	// Public routes
 	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendFile("./static/index.html")
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return c.Send(indexHTML)
 	})
 	app.Post("/api/login", HandleLogin)
 
