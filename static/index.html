@@ -707,13 +707,14 @@
       const bubble = document.createElement("div");
       bubble.className = "flex justify-end w-full";
       bubble.innerHTML = `
-        <div class="max-w-[85%] bg-neutral/85 text-slate-100 px-4 py-3 rounded-2xl rounded-tr-none shadow-md border border-white/5 font-mono text-sm leading-relaxed whitespace-pre-wrap select-text">
+        <div class="w-fit max-w-[85%] bg-neutral/85 text-slate-100 px-4 py-3 rounded-2xl rounded-tr-none shadow-md border border-white/5 font-mono text-sm leading-relaxed whitespace-pre-wrap select-text">
           ${escapeHtml(text)}
         </div>
       `;
       container.appendChild(bubble);
       if (shouldScroll) scrollToBottom();
     }
+
 
     function appendResponseBubble(text, errorText, shouldScroll = true) {
       const container = document.getElementById("messageLogContainer");
