@@ -684,15 +684,29 @@
     function appendPromptBubble(text, shouldScroll = true) {
       const container = document.getElementById("messageLogContainer");
       const bubble = document.createElement("div");
-      bubble.className = "flex justify-end w-full";
-      bubble.innerHTML = `
-        <div class="w-fit max-w-[85%] bg-neutral/85 text-slate-100 px-4 py-3 rounded-2xl rounded-tr-none shadow-md border border-white/5 font-mono text-sm leading-relaxed whitespace-pre-wrap select-text">
-          ${escapeHtml(text)}
+      bubble.className = "flex gap-4 items-start w-full group";
+      
+      const icon = `
+        <div class="bg-neutral/40 text-slate-300 w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center shrink-0">
+          <i data-lucide="user" class="w-4 h-4"></i>
         </div>
       `;
+
+      bubble.innerHTML = `
+        ${icon}
+        <div class="grow flex flex-col space-y-1">
+          <span class="text-[10px] opacity-40 font-bold uppercase tracking-wider">User</span>
+          <div class="prose prose-sm prose-invert select-text text-slate-200 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+            ${escapeHtml(text)}
+          </div>
+        </div>
+      `;
+
       container.appendChild(bubble);
+      lucide.createIcons();
       if (shouldScroll) scrollToBottom();
     }
+
 
 
     function appendResponseBubble(text, errorText, shouldScroll = true) {
