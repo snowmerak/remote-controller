@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -119,13 +120,20 @@ func HandleDeleteSession(c fiber.Ctx) error {
 	}
 
 	// First verify it exists
-	_, err := GetSession(alias)
+	s, err := GetSession(alias)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Session not found"})
 	}
 
 	if err := DeleteSession(alias); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete session"})
+	}
+
+	// Clean up filesystem if it's an auto-generated chat folder
+	normalizedDir := NormalizePath(s.Directory)
+	chatBase := GetChatSessionsBasePath()
+	if strings.HasPrefix(normalizedDir, chatBase) && normalizedDir != chatBase {
+		_ = os.RemoveAll(s.Directory)
 	}
 
 	return c.JSON(fiber.Map{"status": "success"})
